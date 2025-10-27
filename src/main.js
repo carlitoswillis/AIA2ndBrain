@@ -3,8 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import chokidar from 'chokidar';
 import YAML from 'yaml';
-import pdfExtract from 'pdf-extract';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { execFile } from "child_process";
+import util from "util";
+const execFilePromise = util.promisify(execFile);
 
 // ✅ Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -32,17 +34,15 @@ function ensureStructure() {
   console.log("✅ PARA + Inbox structure verified at:", VAULT);
 }
 
-// ✅ PDF → text extraction using Poppler via pdf-extract
-function extractTextFromPDF(filePath) {
-  return new Promise((resolve, reject) => {
-    const processor = pdfExtract(filePath, { type: "text" }, (err) => {
-      if (err) reject(err);
-    });
-    processor.on("complete", (data) => {
-      resolve((data.text_pages || []).join("\n"));
-    });
-    processor.on("error", reject);
-  });
+// ✅ PDF → text extraction using Poppler
+async function extractTextFromPDF(filePath) {
+  try {
+    const { stdout } = await execFilePromise("pdftotext", ["-layout", filePath, "-"]);
+    return stdout;
+  } catch (err) {
+    console.error("❌ PDF extraction failed:", err);
+    return "";
+  }
 }
 
 // ✅ Gemini classification + summarization
