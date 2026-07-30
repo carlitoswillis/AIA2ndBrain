@@ -42,10 +42,10 @@ Context Management" thesis). One system, five organs:
 3. **Brain app** (`brain/`, new) — the face of the system. Grows phase by phase:
    capture/reader → library/search → chat → review. Next.js + better-sqlite3, patterns
    copied from workingmemory (schema-as-code, trigger event log, thin server actions).
-4. **AI layer** — Gemini throughout, in strictly scoped roles: triage summaries at
+4. **AI layer** — Gemini/Claude throughout, in strictly scoped roles: triage summaries at
    capture, PARA classification **constrained to the existing taxonomy**, embeddings for
    retrieval, weekly digests. AI routes attention; the human distills.
-5. **Context ports** (v2) — MCP server exposing search/recent/highlights, making the
+5. **Context ports** (v2) — MCP server exposing search/recent/highlights (Inxlusinf from live WorkingMemory site), making the
    brain memory for Claude Code and future agents. The 4k-note Apple Notes corpus
    (`Notes/`) is backfill data for the index — **and only that**: measured 2026-07-30, 94%
    of it sits in one undifferentiated folder at a 174-byte median, so it gets indexed and
@@ -78,7 +78,7 @@ weekly review, servable to agents via MCP.
 
 Each phase is independently usable; nothing in a later phase blocks a daily habit in an
 earlier one. Scope contract: a phase doesn't start until the previous one has survived
-two weeks of real use.
+two weeks of real use. [ehhhh idk]
 
 **The contract was broken once, deliberately, on 2026-07-30.** Phase 1 shipped and the
 owner's reaction was: "do I just open up the folder and work there?? it's not usable."

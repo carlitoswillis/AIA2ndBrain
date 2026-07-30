@@ -134,6 +134,7 @@ Deploy checklist lives in Active Tasks.
       found. Considered and **declined 2026-07-30**: the owner doesn't mind starting it
       from a terminal, and `npm run dev` (scripts/start.sh) makes that one command. Revisit
       only if "I forgot to start it" turns out to be the reason a day gets skipped.
+- [ ] Allow calender, reminder, email etc... jarvis vibes ugh modern trope but still. deploy? or at least be able to message from phone so deploy like a messaging thing? a queue. etc. smarter than siri vibes.
 
 ## Completed
 - [x] Basic file watcher with Chokidar.
