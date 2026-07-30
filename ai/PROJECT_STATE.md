@@ -86,6 +86,31 @@ Deploy checklist lives in Active Tasks.
       from `brain/.env`. After that the entire coupling is `/api/context` +
       `/api/items` + one token: three JSON fields WM could re-implement on any stack.
       Safe to do any time now that the bridge is deployed and verified in prod.
+- [ ] **Thematic synthesis — "find deep insights in my notes"** (owner, 2026-07-30, after
+      using `/chat`). Everything built so far answers *"where did I write X"*; this asks
+      *"what am I repeatedly thinking about"*, which no single retrieval can answer. The
+      agent said so honestly rather than faking it ("I cannot independently find deep
+      insights… if you have specific themes, provide those keywords"), which is the
+      correct failure but a real capability gap.
+      **The data supports it** — prototyped 2026-07-30 over all 4,259 dated docs, scoring
+      terms by over-representation in a year against the whole corpus (28,869 distinct
+      terms). It reads as a genuine intellectual timeline:
+      - 2016 (649): calnewport, psych, philosophy, concept, spatial, remembering
+      - 2018 (601): marketing, instagram, brand, customers, sales, producer, hashtags
+      - 2021 (316): working-memory, algos, formation, beatpack, subsequence, chopping
+      - 2024 (166): hiring, interview, rails, ruby, pinterest, loss
+      Design implied by that test: **statistics propose, the model narrates.** Cheap
+      counting finds the candidate themes (no API calls, no embeddings), then one LLM
+      pass writes them up with citations into real notes. Expose it two ways — a page,
+      and a tool the `/chat` agent can call, so "what was I obsessed with in 2018"
+      routes to themes instead of a keyword search.
+      Caveats found in the prototype: years with few notes degrade to generic words
+      (2026's 52 notes gave "maybe, even, need"), so it needs a minimum-notes threshold
+      and should say "too few notes to characterise" rather than produce noise; and the
+      term list needs stopword work (URL fragments like `linkcode`, `creativeasin` leaked
+      through from Amazon links).
+      Same machinery as phase 4's weekly-review digest in `ai/ROADMAP.md` — build once,
+      use for both.
 - [ ] **The indexed Notes corpus is frozen, and nothing says so.** `Notes/iCloud/**` is a
       one-time Exporter.app dump: editing a note on iPhone syncs through iCloud to Apple
       Notes but never touches those `.md` files, so the mtime is unchanged, reindex skips
