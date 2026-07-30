@@ -97,10 +97,28 @@ export function readCurrentContext(): Snapshot {
       const db = new Database(file, { readonly: true, fileMustExist: true });
       try {
         const owner = ownerId(db);
-        // The owner's personal board is board_id NULL + user_id (shared boards
-        // live in board_members; the personal board is where the daily loop is).
-        const scope = owner ? "i.board_id IS NULL AND i.user_id = ?" : "1 = 1";
-        const scopeArgs = owner ? [owner] : [];
+        // Every board (incl. "Personal") is a real boards row, so scope to the
+        // board the owner most recently WROTE to — their live daily loop, not a
+        // stranger's (open signup) and not a dormant shared board. Legacy DBs
+        // (pre-boards) fall back to board_id NULL + user_id, then to unscoped.
+        let scope = "1 = 1";
+        let scopeArgs: string[] = [];
+        if (owner) {
+          const board = db
+            .prepare(
+              `SELECT board_id AS b FROM items
+                WHERE user_id = ? AND board_id IS NOT NULL
+                GROUP BY board_id ORDER BY MAX(updated_at) DESC LIMIT 1`
+            )
+            .get(owner) as { b: string } | undefined;
+          if (board) {
+            scope = "i.board_id = ?";
+            scopeArgs = [board.b];
+          } else {
+            scope = "i.board_id IS NULL AND i.user_id = ?";
+            scopeArgs = [owner];
+          }
+        }
 
         // Freshness is the newest write in the scoped set, not the file mtime —
         // a pull rewrites the file without making the data any newer.

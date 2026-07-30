@@ -25,8 +25,11 @@ _Last updated: 2026-07-30._
       visibly with Retry + open-original. **Still owed: Keep → vault inbox → watcher
       files it into PARA**, Delete, duplicate-save dedupe.
 - [ ] Then: two weeks of daily use before phase 2 (ROADMAP scope contract).
-- [ ] Fix Working Memory context staleness — it reads a local snapshot, not the deployed
-      source of truth. See "Known staleness" below for the preferred approach.
+- [ ] WM integration next steps (owner leaning bidirectional): a scoped read-only
+      `GET /api/context` on WM (drops OWNER_SECRET from the brain app, returns ~2KB
+      instead of the full DB) and a `POST` write endpoint through WM's normal write
+      path for brain→board pushes (resurfacing, weekly review). Both are WM-repo
+      changes — specced under "WM connection" below, not yet green-lit.
 - [ ] Restart the watcher to pick up the hardening pass (see Completed 2026-07-30) and
       watch one real capture through it.
 - [ ] Watch one real capture through the hardened watcher and confirm the startup line
@@ -35,34 +38,34 @@ _Last updated: 2026-07-30._
       in brain.db with raw HTML): "AI Data Centers Scramble for Electricians" and
       "AI Surging in Job Titles Across Sectors".
 
-## Known staleness: Working Memory context is read from a local snapshot
+## WM connection: deployed snapshot live (2026-07-30), scoped endpoints proposed
 
-`brain/lib/context.ts` reads `~/workspace/workingmemory/data/owner/wm.db`, but the
-**hosted instance is the source of truth**. That local file is only as fresh as the last
-`RESTORE_LOCAL=1 scripts/pull-backup.sh` or local dev session — so on a day with no pull,
-triage confidently judges saves against a board that may be days stale. That's worse than
-having no context, because a wrong "bears on: X" is trusted.
+**Shipped** — `brain/lib/wm-remote.ts` pulls the DEPLOYED DB via `GET /api/export`
+(same contract and creds as `scripts/pull-backup.sh`; values copied from
+`~/.wm-backup.env` into `brain/.env`): verified (magic bytes + integrity_check)
+before an atomic tmp→rename promote into `data/wm-remote/wm.db`, refreshed in the
+**background** on a `WM_FETCH_TTL_MIN` (15m) TTL — a save never blocks on Render.
+`context.ts` prefers that snapshot (`WM_DB_PATH` still overrides), and now scopes
+to the owner's live board: the hosted DB is multi-tenant (3 users, shared boards),
+so it resolves the owner (first-created account, `WM_OWNER_USERNAME` overrides) and
+takes the board they most recently wrote to. Legacy fallbacks: `board_id IS NULL +
+user_id`, then unscoped. The `lists` join is NULL-safe (`IS`). The 48h staleness
+withholding is unchanged and now measures against hours-fresh data. Verified live:
+336KB snapshot, integrity ok, owner's Personal board, 45 open items, 3.2h-fresh.
 
-Near-term fix, in preference order:
-
-1. **A scoped read endpoint on the deployed Working Memory** — e.g. `GET /api/context`
-   returning just `{list, label, text}` for open items on the owner's active board,
-   guarded by its own read-only token. Preferred because the existing `/api/export` is
-   guarded by `OWNER_SECRET` and returns the *entire multi-account database*; dumping all
-   accounts to read 40 task titles is wildly disproportionate, and it would put that
-   secret inside the brain app.
-2. **Cache locally, don't fetch per-triage.** A save must never block on the network or
-   fail because Render cold-started. Refresh on an interval (or reuse the existing daily
-   pull) into a small local JSON cache; `context.ts` reads the cache and reports its age.
-3. ~~**Show the age in the UI.**~~ ✅ done 2026-07-30 — freshness is measured as
-   `MAX(items.updated_at)` in the snapshot (not the file mtime, which a pull rewrites
-   without making the data newer). The footnote reads "as of 3h ago"; past
-   `WM_STALE_HOURS` (default 48) the context is **withheld entirely** and the footnote
-   says so with the pull command, because stale context makes the model assert ties to
-   work that may already be finished.
-
-Until then `WM_DB_PATH` can be pointed at the newest verified snapshot in
-`backups/pull/<stamp>/wm.db` if that's fresher than the local main DB.
+**Positions on directionality** (owner questioning the pure-unidirectional stance):
+- At the DATA layer unidirectional is right: nothing outside WM should ever write
+  WM's SQLite. `PUT /api/import` replaces the entire DB — disaster recovery only,
+  never a push channel. `wm-remote.ts` is read-only by construction.
+- At the FEATURE layer bidirectional is fine *through WM's front door*: a small
+  authenticated `POST` endpoint in the WM repo that creates items via the normal
+  write path (triggers log history, actor-attributed). Aligns with WM's own
+  "AI over the event stream" roadmap. Proposed WM-side pair, not yet green-lit:
+  1. `GET /api/context` — `{list, label, text}` for the owner's active board,
+     own read-only token → lets the brain app drop OWNER_SECRET and stop pulling
+     the full multi-account DB (the other agent's valid objection to /api/export).
+  2. `POST /api/items` — `{list, text, source: "brain"}`, own scoped token →
+     enables "push to board" (resurfacing, weekly-review outputs).
 
 ## Backlog (now sequenced by ROADMAP.md phases)
 - [ ] Apple Notes live intake — spec in `ai/plans/2026-07-30-apple-notes-intake.md`.
