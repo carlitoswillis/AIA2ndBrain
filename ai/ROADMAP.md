@@ -47,7 +47,15 @@ Context Management" thesis). One system, five organs:
    retrieval, weekly digests. AI routes attention; the human distills.
 5. **Context ports** (v2) — MCP server exposing search/recent/highlights, making the
    brain memory for Claude Code and future agents. The 4k-note Apple Notes corpus
-   (`Notes/`) is backfill data for the index.
+   (`Notes/`) is backfill data for the index — **and only that**: measured 2026-07-30, 94%
+   of it sits in one undifferentiated folder at a 174-byte median, so it gets indexed and
+   made findable, never bulk-filed into PARA (see
+   `ai/plans/2026-07-30-apple-notes-intake.md`). Live Notes capture is specced there too.
+
+   The reverse direction already exists: **Working Memory is an input.** Its task board is
+   read (read-only) as current-work context for triage, per Forte's Personal Context
+   Management thesis — the second brain curating context *for* the AI, not just storing
+   documents for the human.
 
 ## How a thought flows through the system
 
@@ -63,14 +71,22 @@ weekly review, servable to agents via MCP.
 | # | Phase | What ships | Status |
 |---|-------|-----------|--------|
 | 1 | **Capture + Reader** | Save by paste/bookmarklet/API·token, Defuddle extraction, clean reading view, Gemini triage summary, inbox triage (Read/Keep/Delete), Keep → vault inbox export | **scaffold started, paused 2026-07-29** — full build spec + resume checklist in `ai/plans/2026-07-29-phase1-capture-reader.md` |
-| 2 | **Library + Search** | Index vault + Notes corpus into SQLite (FTS5 + sqlite-vec embeddings), browse PARA, hybrid search UI | planned |
-| 3 | **Chat with your brain** | Grounded Q&A with citations over the index; master-context doc (mini Master Prompt) | planned |
+| 2 | **Library + Search** | Index vault + Notes corpus into SQLite (FTS5 + sqlite-vec embeddings), browse PARA, hybrid search UI | **keyword half built 2026-07-30** (`docs`+`docs_fts`, `/library`, `/search`, `/doc/[id]`; 4,333 docs indexed) — spec in `ai/plans/2026-07-30-phase2-library-search.md`. Embeddings deferred to land with phase 3 chat |
+| 3 | **Chat with your brain** | Grounded Q&A with citations over the index; master-context doc (mini Master Prompt) | planned — **context doc pulled forward 2026-07-30**: triage already reads the owner's live task board from the sibling Working Memory app (`brain/lib/context.ts`) and flags which current item a save bears on |
 | 4 | **Review + resurfacing** | AI weekly review digest (themes, resurfaced items vs. Favorite Problems, queue hygiene), review mode | planned |
 | 5 | **Context ports + intake growth** | MCP server, watcher hardening, RSS/newsletter email-in, highlights & progressive summarization, hosted deploy (Render+Litestream, WM's chain) | planned |
 
 Each phase is independently usable; nothing in a later phase blocks a daily habit in an
 earlier one. Scope contract: a phase doesn't start until the previous one has survived
 two weeks of real use.
+
+**The contract was broken once, deliberately, on 2026-07-30.** Phase 1 shipped and the
+owner's reaction was: "do I just open up the folder and work there?? it's not usable."
+That's the correct reaction to a system with capture but no retrieval, and waiting two
+weeks would only have proved it — the missing library was precisely what would have
+prevented the daily use the contract waits for. The lesson kept for next time: the
+contract exists to stop *speculative* scope, not to stall a fix for something the owner
+has already hit.
 
 ## Principles (distilled from the research — see `ai/research/`)
 
@@ -108,6 +124,6 @@ free tier — every call 429'd, so *every* capture took the fallback path. That'
 the collision fire. The brain app still mitigates from its side (timestamp-prefixed
 filenames, atomic writes).
 
-Remaining watcher weakness: single-provider classification. The brain app now runs
-Claude CLI primary with Gemini backstop (`brain/lib/llm.ts`); the watcher has no such
-chain, so a provider outage stops filing entirely.
+Single-provider classification is fixed too: `src/llm.js` gives the watcher the same
+Claude-CLI-primary / Gemini-backstop chain as the brain app (`brain/lib/llm.ts`), so a
+quota wall degrades to a different model instead of to a constant title.
