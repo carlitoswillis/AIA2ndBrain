@@ -81,9 +81,16 @@ withholding is unchanged and now measures against hours-fresh data. Verified liv
             NoteStore schema before any ingestion is wired. Once live, an edit bumps
             `ZMODIFICATIONDATE1` and the ledger updates the entry in place; edits to old
             notes count, and iCloud still has to reach the Mac first.
-- [ ] The Apple Notes export (5.1 GB, mostly attachments) has **no backup** — it lives on
-      a local disk only. Moving it into iCloud would sync it but costs 5.1 GB of storage;
-      decide deliberately rather than by default.
+- [ ] **Retire Exporter.app entirely** (owner's call, 2026-07-30): the export is a
+      one-time bootstrap, not an input to keep feeding. End state in
+      `ai/plans/2026-07-30-apple-notes-intake.md` — live intake keeps current, then a
+      resumable backfill replaces the archive rows from Apple Notes directly, then
+      `~/Documents/AppleNotesExport` gets deleted (5.1 GB reclaimed, one fewer
+      unbacked-up copy of personal data). Deletion is last: until backfill proves itself
+      the export is the only offline copy of that text. Backfill must not read the export
+      — that would keep the manual step in the loop forever.
+- [ ] Until then the export (5.1 GB, mostly attachments) has **no backup**. Living with it
+      is fine short-term precisely because the plan is to delete it, not to sync it.
 - [ ] Reindexing is a manual button. Wants a trigger: on an interval, on app start, or a
       vault file-watcher. Cheap to do (4,333 files reindex in ~2.5s, unchanged ones are
       skipped) and without it the library drifts from disk between clicks.

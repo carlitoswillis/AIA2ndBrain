@@ -73,6 +73,21 @@ reader that ignores `-wal`/`-shm` sees a stale or torn view. Copy all three, ope
 copy `mode=ro`, throw it away after. Never write to Apple's database — this system is a
 reader of Notes, never an author.
 
+## Goal: never run Exporter.app again
+
+Stated by the owner 2026-07-30: the manual GUI export is the thing to get rid of, not a
+dependency to keep feeding. So the export in `~/Documents/AppleNotesExport` is a **one-time
+bootstrap**, not a supported input. Consequences for this design:
+
+- Live intake must eventually own *everything*, including the archive — the system must
+  never need a second Exporter run to stay current.
+- The export folder should become deletable. It's 5.1 GB (4.7 GB of it attachments) with
+  ~5 MB of actual text, and it has no backup. Ingesting from Notes directly means indexing
+  text and leaving attachments in Apple Notes, where they already live and are already
+  backed up by iCloud.
+- Until then the export stays exactly where it is: already indexed, already working, and
+  the honest label for it is "historical snapshot" (see the `/library` labeling task).
+
 ## Cutoff: the archive must not stampede
 
 First run must NOT ingest 4,086 notes. Default `NOTES_SINCE` = the moment of first run,
@@ -112,8 +127,13 @@ notes with converted dates. Run it before wiring anything to real ingestion.
 
 - **Schema drift** on macOS updates breaks detection. Mitigation: probe script, and
   detection failing loudly beats filing wrongly.
-- **osascript latency** — fine for a trickle, unusable for backfill. Backfill, if ever
-  built, should read the existing Exporter markdown in `Notes/` instead.
+- **osascript latency** — fine for a trickle; the constraint on backfill. At roughly a
+  second per note, 4,333 notes is hours. That's acceptable for a **one-time, resumable,
+  overnight** job (the ledger already makes resumption free) but not for anything
+  interactive. If it proves too slow or too flaky, the fallback is decoding the gzipped
+  protobuf in `ZICNOTEDATA` for backfill only — fast, but version-brittle, which is why
+  it isn't the default. What backfill must NOT do is re-read the Exporter markdown: that
+  keeps the manual export in the loop permanently, which is the thing being eliminated.
 - **iCloud sync lag** means a note written on the phone appears late. Acceptable.
 - **A dead Notes.app** (not running) — JXA can launch it; the sweep should not force it
   to the foreground while the user is working.
@@ -128,8 +148,22 @@ notes with converted dates. Run it before wiring anything to real ingestion.
    (`url_hash` is UNIQUE but nullable, so notes need their own dedupe key).
 4. Only then a scheduled sweep (launchd or an interval in the watcher process).
 
+## Retiring the export (the end state)
+
+1. Live intake runs and keeps up with new/changed notes. No further Exporter runs needed
+   for anything current.
+2. A resumable backfill walks the archive from Apple Notes directly, replacing
+   `source='notes'` rows as it goes. Idempotent via the ledger, so it can be stopped and
+   restarted; rows it hasn't reached yet keep serving from the export.
+3. When backfill completes, `~/Documents/AppleNotesExport` can be deleted — 5.1 GB
+   reclaimed, one fewer unbacked-up copy of personal data, and one fewer manual step in
+   the system.
+
+Deletion is the last step, not the first: the export is the only offline copy of that
+text until backfill has actually proven itself.
+
 ## Deferred
 
-Indexing the 4,086-note archive (that's phase 2, `ai/ROADMAP.md`) · attachments and
-images · handwriting/scan OCR · writing back to Apple Notes (never) · triaging the 432
-substantial notes as a batch.
+Attachments and images (they stay in Apple Notes; the index holds text) ·
+handwriting/scan OCR · writing back to Apple Notes (never) · triaging the 432 substantial
+notes as a batch.
