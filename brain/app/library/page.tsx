@@ -1,5 +1,5 @@
 import { indexHealth, notesExportDate, reindexOnce } from "@/lib/indexer";
-import { countDocs, libraryAreas, listDocs } from "@/lib/search";
+import { countDocs, libraryAreas, libraryYears, listDocs } from "@/lib/search";
 import { reindexNow } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ function when(iso: string | null): string {
 export default function LibraryPage({
   searchParams,
 }: {
-  searchParams: { source?: string; area?: string };
+  searchParams: { source?: string; area?: string; year?: string };
 }) {
   // First view of the library in this server process picks up anything that
   // changed on disk while the app wasn't running.
@@ -31,9 +31,10 @@ export default function LibraryPage({
   const health = indexHealth();
   const exportedAt = notesExportDate();
   const areas = libraryAreas();
-  const { source, area } = searchParams;
-  const docs = listDocs({ source, area, limit: 60 });
-  const total = countDocs({ source, area });
+  const { source, area, year } = searchParams;
+  const years = libraryYears();
+  const docs = listDocs({ source, area, year, limit: 60 });
+  const total = countDocs({ source, area, year });
 
   if (health.total === 0) {
     return (
@@ -76,11 +77,44 @@ export default function LibraryPage({
         })}
       </div>
 
+      {/* Browsing by period is the only way to answer "what was I thinking
+          about back then" — no keyword stands for a year. */}
+      <div className="facets years">
+        <span className="facetlabel">When</span>
+        {years.map((y) => {
+          const params = new URLSearchParams();
+          if (source) params.set("source", source);
+          if (area) params.set("area", area);
+          if (y.year !== year) params.set("year", y.year);
+          return (
+            <a
+              className={y.year === year ? "facet on" : "facet"}
+              href={`/library?${params.toString()}`}
+              key={y.year}
+            >
+              {y.year} <span>{y.n}</span>
+            </a>
+          );
+        })}
+      </div>
+
       <p className="resultcount">
-        {source || area ? (
+        {source || area || year ? (
           <>
-            {total} in <strong>{area || "(unfiled)"}</strong>{" "}
-            {source && <>· {SOURCE_LABEL[source] ?? source}</>} — newest first
+            {total}
+            {area && (
+              <>
+                {" "}
+                in <strong>{area}</strong>
+              </>
+            )}
+            {year && (
+              <>
+                {" "}
+                from <strong>{year}</strong>
+              </>
+            )}
+            {source && <> · {SOURCE_LABEL[source] ?? source}</>} — newest first
           </>
         ) : (
           <>{total} documents, newest first</>

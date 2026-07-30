@@ -101,6 +101,27 @@ export function countMatches(query: string): number {
   }
 }
 
+export type YearCount = { year: string; n: number };
+
+/**
+ * Notes per year. "What was I thinking about back then" is a browsing
+ * question, not a search one — no keyword answers it, and asking the index for
+ * the literal string "2019" finds notes that mention the year rather than
+ * notes written in it. Exporter.app preserved each note's date as the file
+ * mtime, so the archive really does span 2014–2026 and can be walked by period.
+ */
+export function libraryYears(): YearCount[] {
+  return getDb()
+    .prepare(
+      `SELECT substr(mtime, 1, 4) AS year, COUNT(*) AS n
+         FROM docs
+        WHERE mtime IS NOT NULL AND year <> ''
+        GROUP BY year
+        ORDER BY year DESC`
+    )
+    .all() as YearCount[];
+}
+
 export type AreaCount = { source: string; area: string | null; n: number };
 
 export function libraryAreas(): AreaCount[] {
@@ -129,9 +150,15 @@ export type DocRow = {
 };
 
 export function listDocs(
-  opts: { source?: string; area?: string; limit?: number; offset?: number } = {}
+  opts: {
+    source?: string;
+    area?: string;
+    year?: string;
+    limit?: number;
+    offset?: number;
+  } = {}
 ): DocRow[] {
-  const { source, area, limit = 50, offset = 0 } = opts;
+  const { source, area, year, limit = 50, offset = 0 } = opts;
   const where: string[] = [];
   const params: unknown[] = [];
   if (source) {
@@ -141,6 +168,10 @@ export function listDocs(
   if (area) {
     where.push("area = ?");
     params.push(area);
+  }
+  if (year) {
+    where.push("substr(mtime, 1, 4) = ?");
+    params.push(year);
   }
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
   return getDb()
@@ -154,7 +185,9 @@ export function getDoc(id: string): DocRow | undefined {
   return getDb().prepare("SELECT * FROM docs WHERE id = ?").get(id) as DocRow | undefined;
 }
 
-export function countDocs(opts: { source?: string; area?: string } = {}): number {
+export function countDocs(
+  opts: { source?: string; area?: string; year?: string } = {}
+): number {
   const where: string[] = [];
   const params: unknown[] = [];
   if (opts.source) {
@@ -164,6 +197,10 @@ export function countDocs(opts: { source?: string; area?: string } = {}): number
   if (opts.area) {
     where.push("area = ?");
     params.push(opts.area);
+  }
+  if (opts.year) {
+    where.push("substr(mtime, 1, 4) = ?");
+    params.push(opts.year);
   }
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
   return (

@@ -37,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav>
               <a href="/">Inbox</a>
               <a href="/library">Library</a>
+              <a href="/ask">Ask</a>
               <a href="/kept">Kept</a>
             </nav>
             <form action="/search" method="get" className="navsearch">

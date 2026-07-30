@@ -186,6 +186,61 @@ a {
   margin: 0 0 1rem;
 }
 
+.years {
+  margin-top: -0.8rem;
+  align-items: baseline;
+}
+
+.facetlabel {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  margin-right: 0.2rem;
+}
+
+/* --- grounded answer (/ask) --- */
+
+.answer {
+  font-family: var(--serif);
+  font-size: 1.18rem;
+  line-height: 1.65;
+  margin: 0 0 2rem;
+  max-width: 40rem;
+}
+
+/* Citations are superscript links: present enough to click, quiet enough to
+   read past. */
+.cite {
+  font-family: var(--sans);
+  font-size: 0.62em;
+  vertical-align: super;
+  line-height: 0;
+  padding: 0 0.15em;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.cite:hover {
+  text-decoration: underline;
+}
+
+.citebadge {
+  display: inline-block;
+  min-width: 1.25rem;
+  padding: 0 0.3rem;
+  margin-right: 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 4px;
+  vertical-align: 1px;
+}
+
 /* --- dense list rows (library + search) --- */
 
 .row {

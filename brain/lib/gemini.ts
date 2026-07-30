@@ -19,26 +19,50 @@ function getClient(): GoogleGenAI {
   return client;
 }
 
-export async function runGemini(prompt: string): Promise<string> {
+// Callers hold plain JSON Schema (what claude's --json-schema takes); this SDK
+// wants its own Type enum and rejects a few JSON Schema keywords outright.
+// Translate rather than maintain two copies of every schema.
+type JsonSchema = {
+  type?: string;
+  description?: string;
+  enum?: string[];
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  items?: JsonSchema;
+};
+
+const TYPES: Record<string, Type> = {
+  object: Type.OBJECT,
+  string: Type.STRING,
+  number: Type.NUMBER,
+  integer: Type.INTEGER,
+  boolean: Type.BOOLEAN,
+  array: Type.ARRAY,
+};
+
+function toGeminiSchema(schema: JsonSchema): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (schema.type) out.type = TYPES[schema.type] ?? Type.STRING;
+  if (schema.description) out.description = schema.description;
+  if (schema.enum) out.enum = schema.enum;
+  if (schema.items) out.items = toGeminiSchema(schema.items);
+  if (schema.properties) {
+    out.properties = Object.fromEntries(
+      Object.entries(schema.properties).map(([k, v]) => [k, toGeminiSchema(v)])
+    );
+  }
+  if (schema.required) out.required = schema.required;
+  // `additionalProperties` is deliberately dropped — the SDK errors on it.
+  return out;
+}
+
+export async function runGemini(prompt: string, schema: object): Promise<string> {
   const res = await getClient().models.generateContent({
     model: MODEL,
     contents: prompt,
     config: {
       responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          summary: {
-            type: Type.STRING,
-            description: "~120 word read/skip decision summary, plain prose.",
-          },
-          suggested_title: {
-            type: Type.STRING,
-            description: "Clean human-readable title.",
-          },
-        },
-        required: ["summary", "suggested_title"],
-      },
+      responseSchema: toGeminiSchema(schema as JsonSchema),
     },
   });
 

@@ -108,12 +108,16 @@ function parseTriage(text: string, fallbackTitle: string | null): Triage {
   };
 }
 
-export async function triage(
-  title: string | null,
-  url: string | null,
-  contentMd: string
-): Promise<Triage> {
-  const prompt = buildPrompt(title, url, contentMd);
+/**
+ * One prompt, one schema, through whichever provider is picked — with the
+ * other as backstop. Every AI call in the app goes through here, so provider
+ * order, availability checks and error aggregation live in exactly one place.
+ */
+export async function runStructured(
+  prompt: string,
+  schema: object,
+  label: string
+): Promise<string> {
   const order =
     getLlmProvider() === "gemini"
       ? (["gemini", "claude"] as const)
@@ -127,18 +131,31 @@ export async function triage(
           errors.push("claude: CLI not found");
           continue;
         }
-        return parseTriage(await runClaude(prompt, TRIAGE_SCHEMA), title);
+        return await runClaude(prompt, schema);
       }
       if (!hasGemini()) {
         errors.push("gemini: GEMINI_API_KEY not set");
         continue;
       }
-      return parseTriage(await runGemini(prompt), title);
+      return await runGemini(prompt, schema);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`triage via ${provider} failed: ${message}`);
+      console.warn(`${label} via ${provider} failed: ${message}`);
       errors.push(`${provider}: ${message}`);
     }
   }
   throw new Error(`all LLM providers failed — ${errors.join("; ")}`);
+}
+
+export async function triage(
+  title: string | null,
+  url: string | null,
+  contentMd: string
+): Promise<Triage> {
+  const text = await runStructured(
+    buildPrompt(title, url, contentMd),
+    TRIAGE_SCHEMA,
+    "triage"
+  );
+  return parseTriage(text, title);
 }
