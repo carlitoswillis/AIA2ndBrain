@@ -8,13 +8,17 @@
 #   ./scripts/start.sh brain
 #
 # Written for macOS's /bin/bash, which is still 3.2 — so no `wait -n`, no
-# associative arrays, no ${arr[@]:-} under `set -u`. Job control is on (set -m)
-# so each child gets its own process group and cleanup can take down `next
-# dev`'s workers too; killing only the parent leaves them holding the port,
-# which is the classic "address already in use" on the next start.
+# associative arrays, no ${arr[@]:-} under `set -u`.
+#
+# Deliberately NO `set -m`. Job control moves the children into their own
+# process groups, which means the terminal's Ctrl-C (delivered to the
+# foreground group) never reaches them — the parent has to relay it, and if
+# anything goes wrong with the trap you get a wedged, unkillable-looking
+# terminal. Without job control every child shares this shell's group, so
+# Ctrl-C hits all of them directly and the trap below is belt-and-braces
+# rather than the only mechanism.
 
 set -uo pipefail
-set -m
 
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
@@ -61,7 +65,12 @@ PIDS=""   # space-separated; bash 3.2 arrays under `set -u` are a minefield
 # loop rather than `sed -u`, which is GNU-only and absent on macOS.
 run() {
   name="$1"; color="$2"; dir="$3"; shift 3
-  ( cd "$dir" && "$@" 2>&1 | while IFS= read -r line; do
+  # stdin from /dev/null is load-bearing, not tidiness. Both children inherit
+  # the terminal otherwise, and a dev server that finds a TTY on stdin may put
+  # it in raw mode to listen for keystrokes. Raw mode disables ISIG, so ^C stops
+  # being a signal and arrives as a literal byte — the terminal appears wedged
+  # and Ctrl-C does nothing, no matter how many times you press it. Observed.
+  ( cd "$dir" && "$@" < /dev/null 2>&1 | while IFS= read -r line; do
       printf '%s%-7s%s %s\n' "$color" "$name" "$RST" "$line"
     done ) &
   PIDS="$PIDS $!"
@@ -92,15 +101,20 @@ CLEANED=0
 cleanup() {
   [ "$CLEANED" = "1" ] && return
   CLEANED=1
-  trap '' INT TERM
+  trap '' INT TERM HUP
+  # Printed FIRST, before any killing: silence after Ctrl-C is what makes a
+  # terminal feel wedged, and the user's next move is another Ctrl-C.
   printf '\n'
   say "stopping…"
   signal_all TERM
   sleep 1
   signal_all KILL
+  # If a child did leave the tty in raw mode, hand the terminal back working.
+  [ -t 0 ] && stty sane 2>/dev/null
   say "stopped."
 }
-trap cleanup INT TERM EXIT
+# HUP too, so closing the terminal window doesn't orphan a server on :3002.
+trap cleanup INT TERM HUP EXIT
 
 if [ "$WHICH" != "brain" ];   then run watcher "$GRN" "$ROOT" node src/main.js; fi
 if [ "$WHICH" != "watcher" ]; then run brain   "$YEL" "$ROOT/brain" npx next dev -p "$PORT"; fi
@@ -111,8 +125,10 @@ printf '\n'
 say "Ctrl-C stops everything"
 printf '\n'
 
-# Poll instead of `wait -n` (bash 4.3+). If either process exits, bring the
-# other down rather than leaving half a system running and looking healthy.
+# Poll instead of `wait -n` (bash 4.3+). The sleep is short on purpose: bash
+# defers a trap until the current foreground command finishes, so this interval
+# is also the worst-case delay between Ctrl-C and anything visible happening.
+# Two seconds of a terminal ignoring you reads as "it's hung".
 while :; do
   for pid in $PIDS; do
     if ! kill -0 "$pid" 2>/dev/null; then
@@ -120,5 +136,5 @@ while :; do
       exit 1
     fi
   done
-  sleep 2
+  sleep 0.3
 done
