@@ -160,5 +160,17 @@ async function refresh(): Promise<void> {
     db.close();
   }
   fs.renameSync(tmp, SNAPSHOT);
+  // Opening the tmp file above created `${tmp}-shm`/`${tmp}-wal`; the rename
+  // moves only the database, orphaning those beside it. They're harmless but
+  // they accumulate, and a stray sidecar next to a SQLite file is exactly the
+  // thing that makes a later reader see a torn view (WM's own pull-backup.sh
+  // deletes them for the same reason).
+  for (const sidecar of [`${tmp}-shm`, `${tmp}-wal`]) {
+    try {
+      fs.rmSync(sidecar, { force: true });
+    } catch {
+      /* best effort */
+    }
+  }
   console.log(`wm snapshot refreshed from ${base} (${(buf.length / 1024).toFixed(0)} KB)`);
 }
