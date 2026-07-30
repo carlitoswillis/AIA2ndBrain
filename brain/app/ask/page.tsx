@@ -128,6 +128,12 @@ export default async function AskPage({ searchParams }: { searchParams: { q?: st
                   (<code>{result.matchQuery}</code>)
                 </>
               )}
+              {result.year && (
+                <>
+                  , restricted to notes written in <strong>{result.year}</strong> by
+                  date rather than by the text mentioning it
+                </>
+              )}
               . Vague words are dropped in favour of the rarer, more specific ones in
               your question. Nothing outside your library is used — if the answer
               isn&apos;t in there, it says so rather than filling the gap.

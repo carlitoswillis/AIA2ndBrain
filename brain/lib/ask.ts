@@ -43,7 +43,27 @@ export type AskResult = {
   passages: Passage[];
   cited: number[];
   matchQuery: string | null;
+  year: string | null;
+  /** When a year was asked for and had nothing: where the matches actually are. */
+  yearsWithMatches: { year: string; n: number }[];
 };
+
+/**
+ * A year in the question is a filter, not a search term. "dreams I had in 2022"
+ * asked as keywords finds notes that mention the string "2022" — which is how
+ * that question returned an Instagram-algorithm note. Notes carry their date
+ * (Exporter preserved it as the file mtime), so the year constrains retrieval
+ * instead of competing with it.
+ */
+export function extractYear(question: string): { year: string | null; rest: string } {
+  const match = /\b(19|20)\d{2}\b/.exec(question);
+  if (!match) return { year: null, rest: question };
+  return {
+    year: match[0],
+    // Removed from the text so it isn't also matched as a word.
+    rest: question.replace(match[0], " "),
+  };
+}
 
 /** Content words, in order, deduped. */
 export function contentWords(question: string): string[] {
@@ -111,14 +131,19 @@ function byInformativeness(words: string[]): string[] {
 export function retrieve(question: string, limit = MAX_PASSAGES): {
   rows: Passage[];
   matchQuery: string | null;
+  year: string | null;
+  yearsWithMatches: { year: string; n: number }[];
 } {
-  const words = byInformativeness(contentWords(question));
-  if (words.length === 0) return { rows: [], matchQuery: null };
+  const { year, rest } = extractYear(question);
+  const words = byInformativeness(contentWords(rest));
+  if (words.length === 0) {
+    return { rows: [], matchQuery: null, year, yearsWithMatches: [] };
+  }
 
   const db = getDb();
   const quoted = words.map((w) => `"${w.replace(/"/g, "")}"`);
 
-  const run = (match: string) =>
+  const run = (match: string, withYear = true) =>
     db
       .prepare(
         `SELECT d.id, d.title, d.area, d.source, d.body, d.summary,
@@ -127,13 +152,35 @@ export function retrieve(question: string, limit = MAX_PASSAGES): {
            JOIN docs d ON d.rowid = docs_fts.rowid
           WHERE docs_fts MATCH ?
             AND d.index_status = 'ok'
+            ${year && withYear ? "AND substr(d.mtime, 1, 4) = ?" : ""}
           ORDER BY score
           LIMIT ?`
       )
-      .all(match, limit) as (Omit<Passage, "n" | "text"> & {
+      .all(...(year && withYear ? [match, year, limit] : [match, limit])) as (Omit<
+      Passage,
+      "n" | "text"
+    > & {
       body: string | null;
       summary: string | null;
     })[];
+
+  // When a year was asked for and holds nothing, "you have none from then, but
+  // 19 from 2017" is far more useful than an empty page — it answers the
+  // question behind the question.
+  const yearHistogram = (match: string) => {
+    try {
+      return db
+        .prepare(
+          `SELECT substr(d.mtime, 1, 4) AS year, COUNT(*) AS n
+             FROM docs_fts JOIN docs d ON d.rowid = docs_fts.rowid
+            WHERE docs_fts MATCH ? AND d.mtime IS NOT NULL
+            GROUP BY year ORDER BY n DESC LIMIT 6`
+        )
+        .all(match) as { year: string; n: number }[];
+    } catch {
+      return [];
+    }
+  };
 
   let matchQuery = quoted.join(" AND ");
   let rows: ReturnType<typeof run> = [];
@@ -157,6 +204,14 @@ export function retrieve(question: string, limit = MAX_PASSAGES): {
     }
   }
 
+  // The year is a hard constraint — never quietly widen it, or the answer
+  // describes a different time than the one asked about. Report where the
+  // matches actually live instead.
+  let yearsWithMatches: { year: string; n: number }[] = [];
+  if (year && rows.length === 0) {
+    yearsWithMatches = yearHistogram(quoted.join(" OR "));
+  }
+
   let budget = TOTAL_BUDGET;
   const passages: Passage[] = [];
   for (const row of rows) {
@@ -175,7 +230,7 @@ export function retrieve(question: string, limit = MAX_PASSAGES): {
     });
   }
 
-  return { rows: passages, matchQuery };
+  return { rows: passages, matchQuery, year, yearsWithMatches };
 }
 
 const ANSWER_SCHEMA = {
@@ -196,7 +251,7 @@ const ANSWER_SCHEMA = {
   additionalProperties: false,
 };
 
-function buildPrompt(question: string, passages: Passage[]): string {
+function buildPrompt(question: string, passages: Passage[], year: string | null): string {
   const numbered = passages
     .map(
       (p) =>
@@ -220,6 +275,14 @@ function buildPrompt(question: string, passages: Passage[]): string {
     "  is worse than useless in a system meant to be a memory.",
     "- Do not speculate about what the reader meant. Quote and attribute.",
     "- Keep it short. Two or three sentences unless the question needs more.",
+    ...(year
+      ? [
+          `- The passages have ALREADY been filtered to notes written in ${year}, by`,
+          "  date, so you can state that they are from that year. Do not look for the",
+          "  year inside the text and do not doubt the date — a note about anything at",
+          `  all in this set was written in ${year}.`,
+        ]
+      : []),
     "",
     `QUESTION: ${question}`,
     "",
@@ -230,21 +293,37 @@ function buildPrompt(question: string, passages: Passage[]): string {
 
 export async function ask(question: string): Promise<AskResult> {
   const trimmed = question.trim();
-  if (!trimmed) return { answer: "", passages: [], cited: [], matchQuery: null };
-
-  const { rows: passages, matchQuery } = retrieve(trimmed);
-  if (passages.length === 0) {
+  if (!trimmed) {
     return {
-      answer:
-        "Nothing in your library matches that. Either it isn't captured yet, or " +
-        "it's worded differently — try the words you'd have used at the time.",
+      answer: "",
       passages: [],
       cited: [],
-      matchQuery,
+      matchQuery: null,
+      year: null,
+      yearsWithMatches: [],
     };
   }
 
-  const raw = await runStructured(buildPrompt(trimmed, passages), ANSWER_SCHEMA, "ask");
+  const { rows: passages, matchQuery, year, yearsWithMatches } = retrieve(trimmed);
+  if (passages.length === 0) {
+    // Answered here rather than by the model: with nothing retrieved there is
+    // nothing to ground an answer in, and asking anyway invites invention.
+    const answer = year
+      ? yearsWithMatches.length
+        ? `Nothing from ${year} matches that. You do have matches in ` +
+          `${yearsWithMatches.map((y) => `${y.year} (${y.n})`).join(", ")} — ` +
+          `try one of those years.`
+        : `Nothing from ${year} matches that, and nothing in other years either.`
+      : "Nothing in your library matches that. Either it isn't captured yet, or " +
+        "it's worded differently — try the words you'd have used at the time.";
+    return { answer, passages: [], cited: [], matchQuery, year, yearsWithMatches };
+  }
+
+  const raw = await runStructured(
+    buildPrompt(trimmed, passages, year),
+    ANSWER_SCHEMA,
+    "ask"
+  );
 
   let answer: string;
   try {
@@ -266,5 +345,12 @@ export async function ask(question: string): Promise<AskResult> {
     return whole;
   });
 
-  return { answer: answer.trim(), passages, cited: cited.sort((a, b) => a - b), matchQuery };
+  return {
+    answer: answer.trim(),
+    passages,
+    cited: cited.sort((a, b) => a - b),
+    matchQuery,
+    year,
+    yearsWithMatches,
+  };
 }
