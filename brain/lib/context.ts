@@ -88,8 +88,13 @@ export function readCurrentContext(): Snapshot {
 
   // Preferred source: the scoped context cache from WM's GET /api/context —
   // already owner-scoped and label-resolved by WM itself.
+  //
+  // If the cache exists it wins even when it holds zero items: an empty board
+  // is a legitimate state (everything done), and falling through to the local
+  // dev file would resurrect months-old items and present them as current.
+  // Authoritatively-empty beats stale-and-plausible.
   const bridged = readWmContextCache();
-  if (bridged && bridged.items.length > 0) {
+  if (bridged) {
     const snapshot = { items: bridged.items.slice(0, MAX_ITEMS), asOf: bridged.asOf };
     cache = { at: Date.now(), snapshot };
     return snapshot;
@@ -223,9 +228,15 @@ export function contextSummary(): {
 } {
   const { items, asOf } = readCurrentContext();
   const ageHours = contextAgeHours(asOf);
+  // Name the source that was actually used, not the DB path we might have
+  // fallen back to — "which of three sources am I reading?" is the first
+  // question when the context looks wrong.
+  const source = readWmContextCache()
+    ? `${process.env.WM_URL ?? "working memory"} /api/context`
+    : wmDbPath();
   return {
     count: items.length,
-    source: wmDbPath(),
+    source,
     asOf,
     ageHours,
     stale: ageHours !== null && ageHours > STALE_HOURS,
