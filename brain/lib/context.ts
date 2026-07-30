@@ -55,21 +55,20 @@ export function wmDbPath(): string {
 
 /**
  * The hosted DB is multi-tenant (open signup), so "most recently touched
- * board" without a user filter could be a stranger's. Resolve the owner: by
- * WM_OWNER_USERNAME when set, else the first-created account (the owner is
- * user #1 by migration order). Local/demo DBs have an empty users table and
- * null user_ids — no scoping needed, return null.
+ * board" without a user filter could be a stranger's. The owner is the account
+ * NAMED "owner" (WM_OWNER_USERNAME overrides) — pinned by name, not inferred;
+ * first-created is only the last-resort fallback. Local/demo DBs have an empty
+ * users table and null user_ids — no scoping needed, return null.
  */
 function ownerId(db: Database.Database): string | null {
   try {
     const count = (db.prepare("SELECT count(*) AS c FROM users").get() as { c: number }).c;
     if (!count) return null;
-    const username = process.env.WM_OWNER_USERNAME;
-    const row = (
-      username
-        ? db.prepare("SELECT id FROM users WHERE username = ?").get(username)
-        : db.prepare("SELECT id FROM users ORDER BY created_at LIMIT 1").get()
-    ) as { id: string } | undefined;
+    const username = process.env.WM_OWNER_USERNAME ?? "owner";
+    const row = ((db.prepare("SELECT id FROM users WHERE username = ?").get(username) ??
+      db.prepare("SELECT id FROM users ORDER BY created_at LIMIT 1").get()) as
+      | { id: string }
+      | undefined);
     return row?.id ?? null;
   } catch {
     return null; // pre-accounts schema — single tenant
