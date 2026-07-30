@@ -149,9 +149,9 @@ export async function processItem(id: string): Promise<void> {
     const t = await triage(title, item.url, contentMd);
     db.prepare(
       `UPDATE items
-          SET summary = ?, title = COALESCE(NULLIF(?, ''), title)
+          SET summary = ?, relevance = ?, title = COALESCE(NULLIF(?, ''), title)
         WHERE id = ?`
-    ).run(t.summary, t.suggested_title, id);
+    ).run(t.summary, t.relevance, t.suggested_title, id);
   } catch (err) {
     // A missing summary is a degraded card, not a lost capture.
     const message = err instanceof Error ? err.message : String(err);
