@@ -1,0 +1,369 @@
+:root {
+  --bg: #faf9f7;
+  --surface: #ffffff;
+  --border: #e3ded6;
+  --text: #1c1a17;
+  --muted: #6d675f;
+  --faint: #989186;
+  --accent: #7a5c2e;
+  --danger: #9a3b28;
+  --radius: 10px;
+  --sans: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --serif: Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14140f;
+    --surface: #1b1b16;
+    --border: #302f28;
+    --text: #ece7dd;
+    --muted: #9d968a;
+    --faint: #6f6a5f;
+    --accent: #d9b877;
+    --danger: #e08f7c;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+.shell {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 2.25rem 1.25rem 5rem;
+}
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.masthead h1 {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.masthead nav {
+  display: flex;
+  gap: 0.9rem;
+  margin-left: auto;
+  font-size: 0.85rem;
+}
+
+.masthead nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.masthead nav a:hover {
+  color: var(--text);
+}
+
+/* --- save form --- */
+
+.saveform {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.saveform input {
+  flex: 1;
+  padding: 0.65rem 0.8rem;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.saveform input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* --- buttons --- */
+
+button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.85rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+button.primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+button.danger {
+  color: var(--danger);
+}
+
+/* --- cards --- */
+
+.card {
+  padding: 1.1rem 1.2rem;
+  margin-bottom: 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.card h2 {
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 0.35rem;
+}
+
+.card h2 a {
+  text-decoration: none;
+}
+
+.card h2 a:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+}
+
+.meta {
+  font-size: 0.78rem;
+  color: var(--faint);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.meta .sep::before {
+  content: "·";
+  margin-right: 0.4rem;
+}
+
+.summary {
+  font-size: 0.92rem;
+  color: var(--muted);
+  margin: 0 0 0.85rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.actions form {
+  display: inline;
+}
+
+.pending,
+.failed {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 0.85rem;
+}
+
+.failed {
+  color: var(--danger);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  word-break: break-word;
+}
+
+.empty {
+  padding: 2.5rem 0;
+  text-align: center;
+  color: var(--faint);
+  font-size: 0.9rem;
+}
+
+/* --- reading view --- */
+
+.article header {
+  margin-bottom: 2rem;
+}
+
+.article h1 {
+  font-family: var(--serif);
+  font-size: 1.85rem;
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.015em;
+  margin: 0 0 0.6rem;
+}
+
+.md-body {
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  line-height: 1.72;
+  max-width: 42rem;
+}
+
+.md-body p {
+  margin: 0 0 1.2em;
+}
+
+.md-body h1,
+.md-body h2,
+.md-body h3 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 2em 0 0.7em;
+}
+
+.md-body h1 {
+  font-size: 1.4em;
+}
+
+.md-body h2 {
+  font-size: 1.25em;
+}
+
+.md-body h3 {
+  font-size: 1.1em;
+}
+
+.md-body a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+
+.md-body blockquote {
+  margin: 1.4em 0;
+  padding-left: 1.1em;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+  font-style: italic;
+}
+
+.md-body pre {
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.md-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+
+.md-body :not(pre) > code {
+  padding: 0.1em 0.35em;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.md-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  margin: 1.4em 0;
+}
+
+.md-body th,
+.md-body td {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.md-body hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2.2em 0;
+}
+
+.footnote {
+  margin-top: 3.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--faint);
+  line-height: 1.6;
+}
+
+.footnote code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+
+.footnote a {
+  color: var(--accent);
+}
+
+.providerform {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.providerform select {
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.25rem 0.4rem;
+}
+
+.providerform button {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.7rem;
+}
+
+.mutedhint {
+  color: var(--faint);
+  font-style: italic;
+}
