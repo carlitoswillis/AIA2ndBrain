@@ -1,6 +1,9 @@
 {
   "type": "module",
   "scripts": {
+    "dev": "./scripts/start.sh",
+    "watcher": "node src/main.js",
+    "brain": "./scripts/start.sh brain",
     "start": "node src/main.js"
   },
   "dependencies": {

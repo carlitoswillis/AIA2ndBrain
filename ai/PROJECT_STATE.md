@@ -129,6 +129,11 @@ Deploy checklist lives in Active Tasks.
 - [ ] Improve PDF extraction robustness (currently relies on `pdftotext`).
 - [ ] Migrate the watcher's Gemini backstop from `@google/generative-ai` (deprecated) to
       `@google/genai` with SDK-native structured output, matching the brain app.
+- [ ] _(bottom of the list, deliberately)_ Always-on via launchd — agents for the watcher
+      and the brain app, `WatchPaths` for auto-restart, explicit PATH so the Claude CLI is
+      found. Considered and **declined 2026-07-30**: the owner doesn't mind starting it
+      from a terminal, and `npm run dev` (scripts/start.sh) makes that one command. Revisit
+      only if "I forgot to start it" turns out to be the reason a day gets skipped.
 
 ## Completed
 - [x] Basic file watcher with Chokidar.
