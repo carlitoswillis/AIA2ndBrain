@@ -338,12 +338,16 @@ export async function ask(question: string): Promise<AskResult> {
   // invented would render as a dead link and quietly imply a source exists.
   const valid = new Set(passages.map((p) => p.n));
   const cited: number[] = [];
-  answer = answer.replace(/\[(\d+)\]/g, (whole, digits: string) => {
-    const n = Number(digits);
-    if (!valid.has(n)) return "";
-    if (!cited.includes(n)) cited.push(n);
-    return whole;
-  });
+  answer = answer
+    .replace(/\[(\d+)\]/g, (whole, digits: string) => {
+      const n = Number(digits);
+      if (!valid.has(n)) return "";
+      if (!cited.includes(n)) cited.push(n);
+      return whole;
+    })
+    // Removing a citation leaves the gap it sat in: "also  which" and " ."
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([.,;:!?])/g, "$1");
 
   return {
     answer: answer.trim(),
