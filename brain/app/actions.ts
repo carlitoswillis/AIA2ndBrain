@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
+import { reindex } from "@/lib/indexer";
 import { getItem, insertItem, processItem } from "@/lib/save";
 import { setSetting } from "@/lib/settings";
 import { exportToVault } from "@/lib/vault";
@@ -53,6 +54,19 @@ export async function retryItem(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   await processItem(id);
   revalidateAll();
+}
+
+export async function reindexNow() {
+  // Synchronous and in-process: 4.3k files took ~2.5s in testing, which is well
+  // inside a request. If the corpus grows an order of magnitude this wants to
+  // become a background job.
+  const stats = reindex();
+  console.log(
+    `reindexed: ${stats.scanned} scanned, +${stats.inserted} new, ~${stats.updated} updated, ` +
+      `${stats.unchanged} unchanged, ${stats.unreadable} unreadable, -${stats.removed} gone (${stats.ms}ms)`
+  );
+  revalidatePath("/library");
+  revalidatePath("/search");
 }
 
 export async function setLlmProvider(formData: FormData) {

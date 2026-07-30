@@ -1,3 +1,4 @@
+import { contextSummary } from "@/lib/context";
 import { getDb, type Item } from "@/lib/db";
 import { getLlmProvider } from "@/lib/settings";
 import { deleteItem, keepItem, retryItem, saveUrl, setLlmProvider } from "./actions";
@@ -7,6 +8,13 @@ export const dynamic = "force-dynamic";
 function readingTime(words: number | null): string | null {
   if (!words) return null;
   return `${Math.max(1, Math.round(words / 220))} min read`;
+}
+
+function formatAge(hours: number | null): string {
+  if (hours === null) return "unknown age";
+  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))}m`;
+  if (hours < 48) return `${Math.round(hours)}h`;
+  return `${Math.round(hours / 24)}d`;
 }
 
 function Card({ item }: { item: Item }) {
@@ -39,6 +47,10 @@ function Card({ item }: { item: Item }) {
       ) : (
         <p className="pending">No summary yet.</p>
       )}
+
+      {/* Only rendered when the model found a real tie to current work —
+          absence is the common, correct case. */}
+      {item.relevance && <p className="relevance">↳ {item.relevance}</p>}
 
       <div className="actions">
         {failed ? (
@@ -78,6 +90,7 @@ export default function InboxPage() {
     )
     .all() as Item[];
 
+  const context = contextSummary();
   const token = process.env.SAVE_TOKEN;
   const bookmarklet = token
     ? `javascript:void(open('http://localhost:3002/api/save?token=${encodeURIComponent(
@@ -114,6 +127,30 @@ export default function InboxPage() {
           <button>Apply</button>
           <span className="mutedhint">the other provider backstops on failure</span>
         </form>
+        <p>
+          <strong>Context</strong> —{" "}
+          {context.count === 0 ? (
+            <>
+              no current-work context found at <code>{context.source}</code> — summaries
+              are generic. Set <code>WM_DB_PATH</code> to point at it.
+            </>
+          ) : context.stale ? (
+            <>
+              Working Memory snapshot is <strong>{formatAge(context.ageHours)} old</strong>{" "}
+              — too stale to trust, so it is <em>not</em> being used. Pull a fresh one
+              (<code>RESTORE_LOCAL=1 scripts/pull-backup.sh</code>).
+            </>
+          ) : (
+            <>
+              triage is judging saves against your <strong>{context.count}</strong> open
+              Working Memory items, as of {formatAge(context.ageHours)} ago; a card shows a{" "}
+              <span className="relevance" style={{ margin: 0 }}>
+                ↳ line
+              </span>{" "}
+              only when there's a real tie.
+            </>
+          )}
+        </p>
         {bookmarklet ? (
           <>
             <p>
