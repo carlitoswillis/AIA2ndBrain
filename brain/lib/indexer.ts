@@ -111,6 +111,21 @@ export function reindex(): IndexStats {
   ];
 
   const work = db.transaction(() => {
+    // A root that doesn't exist means misconfiguration (or a folder that moved),
+    // NOT that every file was deleted. Without this, one bad path turns Reindex
+    // into "wipe 4,327 rows".
+    const liveSources = new Set<string>(
+      sources.filter((s) => fs.existsSync(s.root)).map((s) => s.source)
+    );
+    for (const { source, root } of sources) {
+      if (!liveSources.has(source)) {
+        console.warn(
+          `index root missing for '${source}' (${root}) — keeping its existing rows ` +
+            `instead of treating them as deleted. Check VAULT_ROOT / NOTES_ROOT.`
+        );
+      }
+    }
+
     for (const { source, root, tops } of sources) {
       for (const top of tops) {
         for (const file of walkMarkdown(path.join(root, top))) {
@@ -188,8 +203,11 @@ export function reindex(): IndexStats {
     }
 
     // Files deleted on disk leave the index; the triggers clean up docs_fts.
+    // Only ever prune sources whose root was actually readable this run.
     const remove = db.prepare("DELETE FROM docs WHERE rel_path = ?");
     for (const relPath of existing.keys()) {
+      const source = relPath.split("/")[0];
+      if (!liveSources.has(source)) continue;
       if (!seen.has(relPath)) {
         remove.run(relPath);
         stats.removed += 1;

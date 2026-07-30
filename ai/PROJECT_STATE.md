@@ -81,6 +81,9 @@ withholding is unchanged and now measures against hours-fresh data. Verified liv
             NoteStore schema before any ingestion is wired. Once live, an edit bumps
             `ZMODIFICATIONDATE1` and the ledger updates the entry in place; edits to old
             notes count, and iCloud still has to reach the Mac first.
+- [ ] The Apple Notes export (5.1 GB, mostly attachments) has **no backup** — it lives on
+      a local disk only. Moving it into iCloud would sync it but costs 5.1 GB of storage;
+      decide deliberately rather than by default.
 - [ ] Reindexing is a manual button. Wants a trigger: on an interval, on app start, or a
       vault file-watcher. Cheap to do (4,333 files reindex in ~2.5s, unchanged ones are
       skipped) and without it the library drifts from disk between clicks.
