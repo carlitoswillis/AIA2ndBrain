@@ -4,13 +4,10 @@ import fs from 'fs';
 import path from 'path';
 import chokidar from 'chokidar';
 import YAML from 'yaml';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { execFile } from "child_process";
 import util from "util";
+import { classify, hasClaudeCli, hasGemini } from "./llm.js";
 const execFilePromise = util.promisify(execFile);
-
-// ✅ Gemini client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ✅ iCloud SecondBrain folder
 const VAULT = path.resolve(
@@ -106,8 +103,8 @@ function pickEnum(value, allowed, fallback) {
   return found || fallback;
 }
 
-function cleanTitle(value) {
-  if (typeof value !== "string") return "Untitled Capture";
+function cleanTitle(value, fallback = "Untitled Capture") {
+  if (typeof value !== "string") return fallback;
   const title = value
     .replace(/[\r\n]+/g, " ")
     .replace(/["`]/g, "")
@@ -117,7 +114,7 @@ function cleanTitle(value) {
     .slice(0, 120)
     .trim();
   // A title of only punctuation would slug to "" and land everything together.
-  return /[a-z0-9]/i.test(title) ? title : "Untitled Capture";
+  return /[a-z0-9]/i.test(title) ? title : fallback;
 }
 
 function cleanTags(value) {
@@ -140,52 +137,21 @@ function sanitizeMeta(meta, text) {
     area: pickEnum(raw.area, AREAS, "Resources"),
     domain: pickEnum(raw.domain, DOMAINS, "Other"),
     type: pickEnum(raw.type, TYPES, "note"),
-    title: cleanTitle(raw.title),
+    // A useless title from the model still beats a shared constant: fall back to
+    // the document's own heading so slugs stay distinct.
+    title: cleanTitle(raw.title, fallbackTitle(text)),
     tags: cleanTags(raw.tags),
     summary
   };
 }
 
-// ✅ Gemini classification + summarization
+// ✅ Classification: Claude CLI primary, Gemini backstop (see src/llm.js).
+// The prompt and dispatch live there; validation stays here.
 async function classifyText(text) {
-  const prompt = `
-Return STRICT JSON ONLY:
-
-{
-  "area": "Projects|Areas|Resources|Archives",
-  "domain": "Music|Career|Health|Finances|Creativity|Relationships|Other",
-  "type": "idea|task|note|reflection|resource",
-  "title": "short title <= 10 words",
-  "tags": ["lowercase","keywords"],
-  "summary": "2-3 sentence summary"
-}
-
-TEXT:
-${text}
-`;
-
   try {
-    // 2.5-pro is limit:0 on the free tier — every call 429s. flash is the workhorse.
-    const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" });
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }]
-        }
-      ]
-    });
-
-    // ✅ Correct response extraction for Gemini API
-    const raw = result.response.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    console.log("🤖 Gemini raw:", raw);
-
-    const match = raw.match(/```json([\s\S]*?)```/i);
-    const jsonStr = match ? match[1].trim() : raw.trim();
-
-    return sanitizeMeta(JSON.parse(jsonStr), text);
+    return sanitizeMeta(await classify(text), text);
   } catch (err) {
-    console.error("⚠️ Gemini fallback used:", err.message);
+    console.error("⚠️ Classification unavailable, filing unclassified:", err.message);
 
     // Borrow a title from the document itself. The old constant "Unclassified
     // Capture" meant every failure slugged identically — the collision that ate
@@ -345,6 +311,17 @@ function main() {
   ensureStructure();
   console.log(`👀 Watching for new notes → ${INBOX}`);
   console.log(`📒 Ledger → ${LEDGER_PATH}`);
+
+  // Surface a missing provider at startup, not on the first capture.
+  const primary = (process.env.LLM_PROVIDER || "claude") === "gemini" ? "gemini" : "claude";
+  const available = [
+    hasClaudeCli() ? "claude ✓" : "claude ✗ (CLI not found)",
+    hasGemini() ? "gemini ✓" : "gemini ✗ (no GEMINI_API_KEY)"
+  ];
+  console.log(`🤖 Classifier: ${primary} first · ${available.join(" · ")}`);
+  if (!hasClaudeCli() && !hasGemini()) {
+    console.warn("⚠️ No classifier available — captures will file as unclassified.");
+  }
 
   chokidar
     .watch(INBOX, {
