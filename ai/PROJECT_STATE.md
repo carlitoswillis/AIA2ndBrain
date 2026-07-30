@@ -68,9 +68,22 @@ withholding is unchanged and now measures against hours-fresh data. Verified liv
      enables "push to board" (resurfacing, weekly-review outputs).
 
 ## Backlog (now sequenced by ROADMAP.md phases)
-- [ ] Apple Notes live intake — spec in `ai/plans/2026-07-30-apple-notes-intake.md`.
-      Next step is running `src/notes-probe.mjs` on the Mac (needs Full Disk Access) to
-      confirm the NoteStore schema before any ingestion is wired.
+- [ ] **The indexed Notes corpus is frozen, and nothing says so.** `Notes/iCloud/**` is a
+      one-time Exporter.app dump: editing a note on iPhone syncs through iCloud to Apple
+      Notes but never touches those `.md` files, so the mtime is unchanged, reindex skips
+      it, and the library silently serves a historical snapshot. (The vault is *not*
+      affected — those files are live and reindex picks up edits.) Two parts:
+      - [ ] Surface it — `/library` should label the notes source with its export date so
+            "my edit isn't here" is answerable without reading the code.
+      - [ ] Fix it — Apple Notes live intake, spec in
+            `ai/plans/2026-07-30-apple-notes-intake.md`. Next step is running
+            `src/notes-probe.mjs` on the Mac (needs Full Disk Access) to confirm the
+            NoteStore schema before any ingestion is wired. Once live, an edit bumps
+            `ZMODIFICATIONDATE1` and the ledger updates the entry in place; edits to old
+            notes count, and iCloud still has to reach the Mac first.
+- [ ] Reindexing is a manual button. Wants a trigger: on an interval, on app start, or a
+      vault file-watcher. Cheap to do (4,333 files reindex in ~2.5s, unchanged ones are
+      skipped) and without it the library drifts from disk between clicks.
 - [ ] Phase 2 semantic half — embeddings / `sqlite-vec` for hybrid retrieval. Deferred to
       land with phase 3 chat, where it pays for itself. FTS5 keyword half is **done**.
 - [ ] Phase 3 — Chat with your brain (grounded, cited) + master-context doc.
@@ -80,6 +93,9 @@ withholding is unchanged and now measures against hours-fresh data. Verified liv
 - [ ] Chrome DOM-capture extension for bot-blocked/paywalled/JS-rendered pages —
       design parked in `ai/plans/2026-07-29-chrome-dom-capture.md`. Phase 5 intake;
       do not build until phase 1 has two weeks of use and the failure rate justifies it.
+- [ ] Share Working Memory's visual language (Nocturne) so the brain app feels like part
+      of the same world rather than a stranger. Cosmetic, but it's part of why WM gets
+      used daily and this doesn't yet.
 - [ ] Voice memo transcription (audio → text → PARA).
 - [ ] Obsidian backlink support.
 - [ ] Improve PDF extraction robustness (currently relies on `pdftotext`).
