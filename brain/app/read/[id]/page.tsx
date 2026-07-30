@@ -2,11 +2,18 @@ import { notFound } from "next/navigation";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getDb, type Item } from "@/lib/db";
-import { deleteItem, keepItem } from "../../actions";
+import { wmBridgeConfigured } from "@/lib/wm-remote";
+import { deleteItem, keepItem, sendToBoard } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
-export default function ReadPage({ params }: { params: { id: string } }) {
+export default function ReadPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { pushed?: string };
+}) {
   const db = getDb();
   const item = db.prepare("SELECT * FROM items WHERE id = ?").get(params.id) as
     | Item
@@ -43,10 +50,22 @@ export default function ReadPage({ params }: { params: { id: string } }) {
             <input type="hidden" name="id" value={item.id} />
             <button className="danger">Delete</button>
           </form>
+          {wmBridgeConfigured() && (
+            <form action={sendToBoard}>
+              <input type="hidden" name="id" value={item.id} />
+              <button>→ Board</button>
+            </form>
+          )}
           {item.url && (
             <a href={item.url} target="_blank" rel="noreferrer">
               <button>Original</button>
             </a>
+          )}
+          {searchParams.pushed === "1" && (
+            <span className="mutedhint">sent to your board ✓</span>
+          )}
+          {searchParams.pushed === "err" && (
+            <span className="mutedhint">push failed — is the board deployed with BRAIN_TOKEN?</span>
           )}
         </div>
       </header>

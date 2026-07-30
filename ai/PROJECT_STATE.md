@@ -25,11 +25,13 @@ _Last updated: 2026-07-30._
       visibly with Retry + open-original. **Still owed: Keep → vault inbox → watcher
       files it into PARA**, Delete, duplicate-save dedupe.
 - [ ] Then: two weeks of daily use before phase 2 (ROADMAP scope contract).
-- [ ] WM integration next steps (owner leaning bidirectional): a scoped read-only
-      `GET /api/context` on WM (drops OWNER_SECRET from the brain app, returns ~2KB
-      instead of the full DB) and a `POST` write endpoint through WM's normal write
-      path for brain→board pushes (resurfacing, weekly review). Both are WM-repo
-      changes — specced under "WM connection" below, not yet green-lit.
+- [ ] **Deploy the WM bridge**: both endpoints are BUILT and verified against a
+      scratch instance (see "WM connection" below) but the deployed WM doesn't have
+      them until (1) `BRAIN_TOKEN` is added in the Render dashboard (value = the
+      `BRAIN_TOKEN` line in `workingmemory/.env.local` = `WM_BRAIN_TOKEN` in
+      `brain/.env`) and (2) the WM repo is pushed (auto-deploys). Until then the
+      brain app auto-falls-back to the /api/export snapshot for context, and
+      "→ Board" reports a friendly failure.
 - [ ] Restart the watcher to pick up the hardening pass (see Completed 2026-07-30) and
       watch one real capture through it.
 - [ ] Watch one real capture through the hardened watcher and confirm the startup line
@@ -66,6 +68,16 @@ withholding is unchanged and now measures against hours-fresh data. Verified liv
      the full multi-account DB (the other agent's valid objection to /api/export).
   2. `POST /api/items` — `{list, text, source: "brain"}`, own scoped token →
      enables "push to board" (resurfacing, weekly-review outputs).
+
+**Built 2026-07-30** (owner green-lit). WM repo: `lib/bridge.ts` (BRAIN_TOKEN
+bearer + owner/board resolution) + `app/api/context/route.ts` +
+`app/api/items/route.ts` (insert through the normal write path — `touched_by`
+stamped, triggers wrote `created by <owner>` in the scratch test; wrong token
+401s; unset token 404s). Brain repo: `wm-remote.ts` gained the context-cache
+fetcher (prefers `/api/context`, auto-falls-back to the export snapshot while
+the endpoint isn't deployed), `wm-push.ts` is the single write path out, and
+the reader has a "→ Board" button (pushes "title — url" to Brain Dump).
+Deploy checklist lives in Active Tasks.
 
 ## Backlog (now sequenced by ROADMAP.md phases)
 - [ ] **The indexed Notes corpus is frozen, and nothing says so.** `Notes/iCloud/**` is a

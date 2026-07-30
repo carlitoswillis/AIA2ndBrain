@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { maybeRefreshWmSnapshot, wmSnapshotPath } from "./wm-remote";
+import { maybeRefreshWmContext, readWmContextCache, wmSnapshotPath } from "./wm-remote";
 
 // Personal Context Management (Forte, 2026): a second brain is curated context
 // for AI, not just a filing cabinet. The owner's live task board lives in the
@@ -81,11 +81,20 @@ function ownerId(db: Database.Database): string | null {
  * sibling app must not be able to break capture.
  */
 export function readCurrentContext(): Snapshot {
-  // Kick a background refresh of the deployed snapshot if it's past TTL —
-  // never blocks this read; the next one benefits.
-  maybeRefreshWmSnapshot();
+  // Kick a background refresh (scoped /api/context when bridged, else the
+  // full-snapshot fallback) — never blocks this read; the next one benefits.
+  maybeRefreshWmContext();
 
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.snapshot;
+
+  // Preferred source: the scoped context cache from WM's GET /api/context —
+  // already owner-scoped and label-resolved by WM itself.
+  const bridged = readWmContextCache();
+  if (bridged && bridged.items.length > 0) {
+    const snapshot = { items: bridged.items.slice(0, MAX_ITEMS), asOf: bridged.asOf };
+    cache = { at: Date.now(), snapshot };
+    return snapshot;
+  }
 
   let items: ContextItem[] = [];
   let asOf: string | null = null;

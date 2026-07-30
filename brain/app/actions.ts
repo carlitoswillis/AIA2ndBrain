@@ -7,6 +7,7 @@ import { reindex } from "@/lib/indexer";
 import { getItem, insertItem, processItem } from "@/lib/save";
 import { setSetting } from "@/lib/settings";
 import { exportToVault } from "@/lib/vault";
+import { pushToBoard } from "@/lib/wm-push";
 
 function revalidateAll() {
   revalidatePath("/");
@@ -67,6 +68,21 @@ export async function reindexNow() {
   );
   revalidatePath("/library");
   revalidatePath("/search");
+}
+
+export async function sendToBoard(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const item = getItem(id);
+  if (!item) return;
+
+  const title = (item.title ?? "").trim() || item.url || "Untitled";
+  const text = item.url ? `${title} — ${item.url}` : title;
+  const result = await pushToBoard(text);
+  if (!result.ok) {
+    console.error(`push to board failed for ${id}: ${result.error}`);
+    redirect(`/read/${id}?pushed=err`);
+  }
+  redirect(`/read/${id}?pushed=1`);
 }
 
 export async function setLlmProvider(formData: FormData) {
