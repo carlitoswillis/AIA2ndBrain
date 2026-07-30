@@ -11,7 +11,10 @@ export type PushResult =
   | { ok: true; list: string; board: string | null }
   | { ok: false; error: string };
 
-export async function pushToBoard(text: string, list?: string): Promise<PushResult> {
+export async function pushToBoard(
+  text: string,
+  opts?: { list?: string; details?: string }
+): Promise<PushResult> {
   if (!wmBridgeConfigured()) {
     return { ok: false, error: "WM_URL / WM_BRAIN_TOKEN not configured" };
   }
@@ -23,7 +26,11 @@ export async function pushToBoard(text: string, list?: string): Promise<PushResu
         authorization: `Bearer ${process.env.WM_BRAIN_TOKEN}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify(list ? { text, list } : { text }),
+      body: JSON.stringify({
+        text,
+        ...(opts?.list ? { list: opts.list } : {}),
+        ...(opts?.details ? { details: opts.details } : {}),
+      }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}: ${await res.text()}` };

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { reindex } from "@/lib/indexer";
 import { getItem, insertItem, processItem } from "@/lib/save";
+import { getDoc } from "@/lib/search";
 import { setSetting } from "@/lib/settings";
 import { exportToVault } from "@/lib/vault";
 import { pushToBoard } from "@/lib/wm-push";
@@ -75,14 +76,32 @@ export async function sendToBoard(formData: FormData) {
   const item = getItem(id);
   if (!item) return;
 
-  const title = (item.title ?? "").trim() || item.url || "Untitled";
-  const text = item.url ? `${title} — ${item.url}` : title;
-  const result = await pushToBoard(text);
+  // Clean title as the card; link + triage summary in the panel details.
+  const text = (item.title ?? "").trim() || item.url || "Untitled";
+  const details = [item.url, item.summary].filter(Boolean).join("\n\n");
+  const result = await pushToBoard(text, { details });
   if (!result.ok) {
     console.error(`push to board failed for ${id}: ${result.error}`);
     redirect(`/read/${id}?pushed=err`);
   }
   redirect(`/read/${id}?pushed=1`);
+}
+
+export async function sendDocToBoard(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const doc = getDoc(id);
+  if (!doc) return;
+
+  const text = (doc.title ?? "").trim() || doc.rel_path;
+  const where = `${doc.source === "vault" ? "vault" : "notes"} · ${doc.area || "(unfiled)"} · ${doc.rel_path}`;
+  const excerpt = doc.summary?.trim() || (doc.body ?? "").trim().slice(0, 280);
+  const details = [where, excerpt].filter(Boolean).join("\n\n");
+  const result = await pushToBoard(text, { details });
+  if (!result.ok) {
+    console.error(`push doc to board failed for ${id}: ${result.error}`);
+    redirect(`/doc/${id}?pushed=err`);
+  }
+  redirect(`/doc/${id}?pushed=1`);
 }
 
 export async function setLlmProvider(formData: FormData) {

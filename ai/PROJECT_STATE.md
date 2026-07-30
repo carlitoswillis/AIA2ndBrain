@@ -80,6 +80,12 @@ the reader has a "→ Board" button (pushes "title — url" to Brain Dump).
 Deploy checklist lives in Active Tasks.
 
 ## Backlog (now sequenced by ROADMAP.md phases)
+- [ ] **Loosen the WM coupling to bridge-only** (owner-confirmed direction): delete the
+      `/api/export` snapshot fallback — `wm-remote.ts` snapshot fetcher, the SQLite
+      branch of `context.ts` (all the WM-schema-reading code), and `WM_OWNER_SECRET`
+      from `brain/.env`. After that the entire coupling is `/api/context` +
+      `/api/items` + one token: three JSON fields WM could re-implement on any stack.
+      Safe to do any time now that the bridge is deployed and verified in prod.
 - [ ] **The indexed Notes corpus is frozen, and nothing says so.** `Notes/iCloud/**` is a
       one-time Exporter.app dump: editing a note on iPhone syncs through iCloud to Apple
       Notes but never touches those `.md` files, so the mtime is unchanged, reindex skips

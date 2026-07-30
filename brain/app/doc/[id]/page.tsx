@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getDoc } from "@/lib/search";
+import { wmBridgeConfigured } from "@/lib/wm-remote";
+import { sendDocToBoard } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +24,16 @@ function bodyBeyondTitle(body: string | null, title: string | null): string | nu
   return remaining.length ? body : null;
 }
 
-// The same reading view captures get, pointed at an indexed file. Read-only by
-// design: the vault is written by the watcher and by hand, never by the browser.
-export default function DocPage({ params }: { params: { id: string } }) {
+// The same reading view captures get, pointed at an indexed file. Read-only
+// toward the vault: files are written by the watcher and by hand, never by the
+// browser. (→ Board writes to Working Memory via its API, not to any file.)
+export default function DocPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { pushed?: string };
+}) {
   const doc = getDoc(params.id);
   if (!doc) notFound();
 
@@ -43,6 +52,20 @@ export default function DocPage({ params }: { params: { id: string } }) {
         <div className="meta">
           <code>{doc.rel_path}</code>
         </div>
+        {wmBridgeConfigured() && (
+          <div className="actions">
+            <form action={sendDocToBoard}>
+              <input type="hidden" name="id" value={doc.id} />
+              <button>→ Board</button>
+            </form>
+            {searchParams.pushed === "1" && (
+              <span className="mutedhint">sent to your board ✓</span>
+            )}
+            {searchParams.pushed === "err" && (
+              <span className="mutedhint">push failed — see server log</span>
+            )}
+          </div>
+        )}
       </header>
 
       {doc.index_status !== "ok" ? (
