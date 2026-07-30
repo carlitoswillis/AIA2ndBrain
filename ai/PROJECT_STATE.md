@@ -86,6 +86,24 @@ Deploy checklist lives in Active Tasks.
       from `brain/.env`. After that the entire coupling is `/api/context` +
       `/api/items` + one token: three JSON fields WM could re-implement on any stack.
       Safe to do any time now that the bridge is deployed and verified in prod.
+- [ ] **A corpus map as standing context for agents** (owner's idea, 2026-07-30, thinking
+      aloud — not scheduled). The reason `/chat` searched "deep insights" literally is
+      that it had no idea what vocabulary the corpus contains: the owner writes "beats"
+      not "music production", "algos", "formation" as a proper noun. That's missing
+      information, not a missing instruction, so no prompt tuning fixes it.
+      The theme statistics above produce the fix for free: per-era vocabulary, counts and
+      areas compress to roughly a kilobyte — cheap enough to prepend to every agent
+      prompt, and enough for a model to translate a vague request into the owner's actual
+      words before searching.
+      Constraints that matter: keep it **small and derived**, regenerated on reindex and
+      never hand-maintained. A stale map is worse than none — it points confidently at
+      vocabulary that no longer exists — and "bloated" context costs latency on every
+      call. A map of the territory, not a copy of it.
+      This is what phase 3's "master-context doc" should actually be; the roadmap
+      underspecified it as a Forte-style master prompt. It also doubles as the
+      suggestions surface (open `/chat` with "649 notes from 2016 about deep work" rather
+      than an empty box), and it's what an MCP client should receive on connect — same
+      problem, an agent arriving with zero context.
 - [ ] **Thematic synthesis — "find deep insights in my notes"** (owner, 2026-07-30, after
       using `/chat`). Everything built so far answers *"where did I write X"*; this asks
       *"what am I repeatedly thinking about"*, which no single retrieval can answer. The
