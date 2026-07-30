@@ -76,6 +76,10 @@ export async function sendToBoard(formData: FormData) {
   const item = getItem(id);
   if (!item) return;
 
+  // Already sent: don't create a second card. WM has no idempotency key, so
+  // this side has to be the one that remembers.
+  if (item.pushed_at) redirect(`/read/${id}`);
+
   // Clean title as the card; link + triage summary in the panel details.
   const text = (item.title ?? "").trim() || item.url || "Untitled";
   const details = [item.url, item.summary].filter(Boolean).join("\n\n");
@@ -84,7 +88,14 @@ export async function sendToBoard(formData: FormData) {
     console.error(`push to board failed for ${id}: ${result.error}`);
     redirect(`/read/${id}?pushed=err`);
   }
-  redirect(`/read/${id}?pushed=1`);
+
+  getDb()
+    .prepare(
+      "UPDATE items SET pushed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?"
+    )
+    .run(id);
+  revalidateAll();
+  redirect(`/read/${id}`);
 }
 
 export async function sendDocToBoard(formData: FormData) {

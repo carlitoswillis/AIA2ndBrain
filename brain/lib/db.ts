@@ -38,6 +38,7 @@ export type Item = {
   word_count: number | null;
   summary: string | null;
   relevance: string | null;
+  pushed_at: string | null;
   published_at: string | null;
   saved_at: string;
   read_at: string | null;

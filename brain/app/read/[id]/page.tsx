@@ -50,19 +50,24 @@ export default function ReadPage({
             <input type="hidden" name="id" value={item.id} />
             <button className="danger">Delete</button>
           </form>
-          {wmBridgeConfigured() && (
-            <form action={sendToBoard}>
-              <input type="hidden" name="id" value={item.id} />
-              <button>→ Board</button>
-            </form>
-          )}
+          {wmBridgeConfigured() &&
+            (item.pushed_at ? (
+              // Persisted, so this survives a refresh — and the button is gone
+              // rather than disabled, because a second press would make a
+              // duplicate card that only you could clean up.
+              <span className="mutedhint">
+                on your board · {item.pushed_at.slice(0, 10)}
+              </span>
+            ) : (
+              <form action={sendToBoard}>
+                <input type="hidden" name="id" value={item.id} />
+                <button>→ Board</button>
+              </form>
+            ))}
           {item.url && (
             <a href={item.url} target="_blank" rel="noreferrer">
               <button>Original</button>
             </a>
-          )}
-          {searchParams.pushed === "1" && (
-            <span className="mutedhint">sent to your board ✓</span>
           )}
           {searchParams.pushed === "err" && (
             <span className="mutedhint">push failed — is the board deployed with BRAIN_TOKEN?</span>

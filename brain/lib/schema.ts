@@ -133,6 +133,9 @@ END;
 const ADDED_COLUMNS: Array<{ table: string; column: string; ddl: string }> = [
   // Why the article matters given the owner's current work (see lib/context.ts).
   { table: "items", column: "relevance", ddl: "ALTER TABLE items ADD COLUMN relevance TEXT" },
+  // When this was pushed to the Working Memory board. Persisted rather than
+  // held in a URL param so a refresh doesn't offer to send it a second time.
+  { table: "items", column: "pushed_at", ddl: "ALTER TABLE items ADD COLUMN pushed_at TEXT" },
 ];
 
 function migrateDb(db: Database.Database) {

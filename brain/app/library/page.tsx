@@ -1,4 +1,4 @@
-import { indexHealth } from "@/lib/indexer";
+import { indexHealth, notesExportDate, reindexOnce } from "@/lib/indexer";
 import { countDocs, libraryAreas, listDocs } from "@/lib/search";
 import { reindexNow } from "../actions";
 
@@ -24,7 +24,12 @@ export default function LibraryPage({
 }: {
   searchParams: { source?: string; area?: string };
 }) {
+  // First view of the library in this server process picks up anything that
+  // changed on disk while the app wasn't running.
+  reindexOnce();
+
   const health = indexHealth();
+  const exportedAt = notesExportDate();
   const areas = libraryAreas();
   const { source, area } = searchParams;
   const docs = listDocs({ source, area, limit: 60 });
@@ -108,6 +113,15 @@ export default function LibraryPage({
       ))}
 
       <div className="footnote">
+        {exportedAt && (
+          <p>
+            <strong>Notes archive is a snapshot</strong> — exported from Apple Notes{" "}
+            {when(exportedAt)} ({exportedAt.slice(0, 10)}). Notes you write or edit on
+            your phone since then aren&apos;t here, and reindexing won&apos;t find them:
+            the export is a copy, not a live link. (Vault files are live — edits to those
+            do show up.)
+          </p>
+        )}
         <p>
           Index: <strong>{health.total}</strong> documents
           {health.unreadable > 0 && (

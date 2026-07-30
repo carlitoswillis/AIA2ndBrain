@@ -1,14 +1,31 @@
 import type { Metadata } from "next";
+import { Fraunces, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
+// The same two voices Working Memory uses, so the siblings read as one system.
+// Fraunces — the literary "memory" voice (wordmark, headings, article body).
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+  style: ["normal", "italic"],
+});
+
+// Space Grotesk — the interface voice (titles, labels, data).
+const grotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-grotesk",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Brain — Inbox",
-  description: "Capture and reader for AIA2ndBrain",
+  title: "Brain",
+  description: "Capture, read, and find everything you've saved.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${fraunces.variable} ${grotesk.variable}`}>
       <body>
         <div className="shell">
           <header className="masthead">

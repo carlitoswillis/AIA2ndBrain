@@ -220,6 +220,41 @@ export function reindex(): IndexStats {
   return stats;
 }
 
+/**
+ * The Notes corpus is a one-time Exporter.app dump, so editing a note on an
+ * iPhone changes Apple Notes but never these files — the library would serve a
+ * historical snapshot with no way to tell. Newest file mtime ≈ when the export
+ * was taken; showing it makes "why isn't my edit here?" self-answering.
+ */
+export function notesExportDate(): string | null {
+  const row = getDb()
+    .prepare("SELECT MAX(mtime) AS m FROM docs WHERE source = 'notes'")
+    .get() as { m: string | null } | undefined;
+  return row?.m ?? null;
+}
+
+// Reindex once per server process, lazily, the first time the library is
+// looked at. Not at import time: a cold `next dev` shouldn't spend 2.5s walking
+// the disk before it can serve the inbox, and a crash in here must never take
+// the whole app down with it.
+let booted = false;
+
+export function reindexOnce(): void {
+  if (booted) return;
+  booted = true;
+  try {
+    const stats = reindex();
+    if (stats.inserted || stats.updated || stats.removed) {
+      console.log(
+        `library refreshed: +${stats.inserted} ~${stats.updated} -${stats.removed} ` +
+          `(${stats.unchanged} unchanged, ${stats.ms}ms)`
+      );
+    }
+  } catch (err) {
+    console.warn(`startup reindex failed: ${err instanceof Error ? err.message : err}`);
+  }
+}
+
 export function indexHealth(): {
   total: number;
   unreadable: number;

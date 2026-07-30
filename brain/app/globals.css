@@ -1,27 +1,56 @@
+/* ── Nocturne, ported from Working Memory ────────────────────────────────
+   The two apps are one system, so they share a world: warm amber = now /
+   attention, cool faded blue = the past, matte throughout — colour carries
+   meaning, never bloom. Dark is the default; "Nocturne Day" arrives with a
+   device light preference.
+
+   The palette is WM's, verbatim. The names on the left are this app's, so
+   every rule below keeps working — a re-skin, not a rewrite. */
 :root {
-  --bg: #faf9f7;
-  --surface: #ffffff;
-  --border: #e3ded6;
-  --text: #1c1a17;
-  --muted: #6d675f;
-  --faint: #989186;
-  --accent: #7a5c2e;
-  --danger: #9a3b28;
+  --bg-0: #0b0e1a;
+  --bg-1: #0e1124;
+  --surface-2: #19213b;
+  --veil-soft: #1a2037;
+  --now: #e3a866;
+  --past: #6e8bc4;
+  --done: #6fb89c;
+
+  --bg: var(--bg-0);
+  --surface: #141a2e;
+  --border: #232b45;
+  --text: #ecebf4;
+  --muted: #a7acc4;
+  --faint: #6f7596;
+  --accent: var(--now);
+  /* WM has no danger token — destructive actions are this app's own idea.
+     A desaturated clay that sits inside the palette instead of shouting. */
+  --danger: #cf8074;
+  --field: rgba(8, 10, 18, 0.5);
+
   --radius: 10px;
-  --sans: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-  --serif: Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --sans: var(--font-grotesk), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   :root {
-    --bg: #14140f;
-    --surface: #1b1b16;
-    --border: #302f28;
-    --text: #ece7dd;
-    --muted: #9d968a;
-    --faint: #6f6a5f;
-    --accent: #d9b877;
-    --danger: #e08f7c;
+    --bg-0: #eae5d8;
+    --bg-1: #f5f2e9;
+    --surface-2: #efeadc;
+    --veil-soft: #e2dccb;
+    --now: #a06a24;
+    --past: #4d6ba8;
+    --done: #2e7d64;
+
+    --surface: #fbf9f2;
+    --border: #d3ccb9;
+    --text: #2b2a35;
+    --muted: #565567;
+    --faint: #75738a;
+    --danger: #a1402f;
+    --field: rgba(255, 255, 255, 0.65);
+    color-scheme: light;
   }
 }
 
@@ -33,15 +62,24 @@ html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
 }
 
 body {
-  background: var(--bg);
+  /* WM's fixed dusk gradient: the page has a horizon, not a flat fill. */
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-0) 55%);
+  background-attachment: fixed;
+  min-height: 100%;
   color: var(--text);
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--now) 22%, transparent);
 }
 
 a {
@@ -95,7 +133,8 @@ a {
   font: inherit;
   font-size: 0.82rem;
   color: var(--text);
-  background: var(--surface);
+  /* Inputs are recessed, not raised — WM's --field, a well in the surface. */
+  background: var(--field);
   border: 1px solid var(--border);
   border-radius: 999px;
 }
@@ -204,7 +243,7 @@ a {
   font: inherit;
   font-size: 0.95rem;
   color: var(--text);
-  background: var(--surface);
+  background: var(--field);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }

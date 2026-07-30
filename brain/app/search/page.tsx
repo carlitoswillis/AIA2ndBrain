@@ -1,3 +1,4 @@
+import { reindexOnce } from "@/lib/indexer";
 import { countMatches, searchDocs } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,10 @@ function Snippet({ text }: { text: string }) {
 }
 
 export default function SearchPage({ searchParams }: { searchParams: { q?: string } }) {
+  // Searching a stale index is the failure that erodes trust fastest — you'd
+  // conclude the note isn't there. Same once-per-process refresh as /library.
+  reindexOnce();
+
   const query = (searchParams.q ?? "").trim();
   const hits = query ? searchDocs(query) : [];
   const total = query ? countMatches(query) : 0;
