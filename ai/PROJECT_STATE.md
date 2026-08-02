@@ -25,13 +25,13 @@ _Last updated: 2026-07-30._
       visibly with Retry + open-original. **Still owed: Keep → vault inbox → watcher
       files it into PARA**, Delete, duplicate-save dedupe.
 - [ ] Then: two weeks of daily use before phase 2 (ROADMAP scope contract).
-- [ ] **Deploy the WM bridge**: both endpoints are BUILT and verified against a
-      scratch instance (see "WM connection" below) but the deployed WM doesn't have
-      them until (1) `BRAIN_TOKEN` is added in the Render dashboard (value = the
-      `BRAIN_TOKEN` line in `workingmemory/.env.local` = `WM_BRAIN_TOKEN` in
-      `brain/.env`) and (2) the WM repo is pushed (auto-deploys). Until then the
-      brain app auto-falls-back to the /api/export snapshot for context, and
-      "→ Board" reports a friendly failure.
+- [ ] **Confirm the WM bridge's READ half is live** (2026-08-02). The bridge is deployed
+      and the write half is verified by the owner in real use — "→ Board" puts a note on
+      Brain Dump. The read half is unconfirmed: `wm-remote.ts` auto-falls back to the
+      `/api/export` snapshot, so push can work while context still comes from the old
+      path. The inbox footnote names whichever source was actually used
+      (`context.ts:234-236`) — read it. Until it says `/api/context`, the backlog's
+      coupling-removal item can't be finished.
 - [ ] Restart the watcher to pick up the hardening pass (see Completed 2026-07-30) and
       watch one real capture through it.
 - [ ] Watch one real capture through the hardened watcher and confirm the startup line
@@ -86,6 +86,17 @@ Deploy checklist lives in Active Tasks.
       from `brain/.env`. After that the entire coupling is `/api/context` +
       `/api/items` + one token: three JSON fields WM could re-implement on any stack.
       Safe to do any time now that the bridge is deployed and verified in prod.
+- [ ] **Make the WM read path visible** — spec in `ai/plans/2026-08-02-wm-visibility.md`.
+      From the owner's reaction once the bridge was live: push is a button and obviously
+      works, pull is a substrate and looks identical whether it's feeding triage or dead.
+      Two small presentation changes, no new data or coupling: (1) a collapsed `<details>`
+      context panel in the inbox footnote showing exactly what the model was given —
+      built from one shared `buildContext()` so the panel can't drift from the prompt,
+      and surfacing the two silent truncations (48h staleness withholding, the 1,800-char
+      cap); (2) the existing `items.relevance` rendered on `/read/[id]` next to "→ Board",
+      qualified with its age because it's computed once at save time against a board that
+      has since moved on. Explicitly not a WM panel in brain — the direction in
+      `ROADMAP.md:55-58` stands, and this must not grow into phase 4's digest.
 - [ ] **A corpus map as standing context for agents** (owner's idea, 2026-07-30, thinking
       aloud — not scheduled). The reason `/chat` searched "deep insights" literally is
       that it had no idea what vocabulary the corpus contains: the owner writes "beats"
